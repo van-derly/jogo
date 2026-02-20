@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoQuiz Blitz - 8º Ano</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #020617 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .glass {
+            background: rgba(250, 249, 246, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .timer-bar {
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .option-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .correct-answer { background-color: #4ade80 !important; color: white !important; border-color: #22c55e !important; }
+        .wrong-answer { background-color: #f87171 !important; color: white !important; border-color: #ef4444 !important; }
+        
+        /* Ocultar scrollbar mas permitir rolagem */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- Container Principal -->
+    <div id="app-container" class="glass rounded-3xl w-full max-w-lg p-6 sm:p-8 relative overflow-hidden">
+        
+        <!-- Tela Inicial -->
+        <div id="screen-home" class="text-center space-y-5">
+            <div class="inline-block px-4 py-2 border-4 border-red-600 rounded-lg mb-2 opacity-90 rotate-[-5deg]">
+                <span class="text-red-600 font-black text-3xl tracking-widest uppercase">Ultra Secreto</span>
+            </div>
+            <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">Operação: GeoQuiz</h1>
+            <p class="text-gray-600 font-medium leading-relaxed px-2">
+                198X. O mundo está dividido e a tensão é máxima. Você é um agente duplo com a missão de interceptar dossiês geopolíticos.
+            </p>
+            
+            <div class="bg-gray-900 p-4 rounded-xl text-sm text-left text-green-400 space-y-2 shadow-inner font-mono">
+                <p class="text-green-500"><strong>> TERMINAL DE MISSÃO ATIVO_</strong></p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Sua missão tem 3 Níveis de Segurança (8 documentos cada).</li>
+                    <li>Descriptografe no mínimo <strong>4 arquivos</strong> para não ser descoberto.</li>
+                    <li><span class="text-red-400">Risco Crítico:</span> Os dados se autodestroem entre <strong>5 a 7 SEGUNDOS!</strong></li>
+                    <li>Velocidade e precisão garantem maior nível de autorização (pontos).</li>
+                </ul>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl text-lg transition-colors shadow-lg shadow-red-200">
+                🕶️ ACEITAR MISSÃO
+            </button>
+            <button onclick="showScreen('screen-ranking')" class="w-full bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50 font-bold py-3 rounded-xl transition-colors">
+                📁 Acessar Dossiês (Ranking)
+            </button>
+        </div>
+
+        <!-- Tela de Transição de Fase -->
+        <div id="screen-phase" class="hidden text-center space-y-6 py-10">
+            <h2 id="phase-title" class="text-4xl font-extrabold text-gray-800">Fase 1</h2>
+            <p id="phase-subtitle" class="text-xl text-gray-600 font-semibold">Nível Fácil</p>
+            <div class="animate-bounce text-5xl mt-8">⏱️</div>
+            <p class="text-sm text-gray-500 mt-4">Prepare-se...</p>
+        </div>
+
+        <!-- Tela do Jogo -->
+        <div id="screen-game" class="hidden flex flex-col h-full">
+            <!-- Header do Jogo -->
+            <div class="flex justify-between items-center mb-4 text-sm font-bold text-gray-600">
+                <span id="game-phase-indicator" class="bg-gray-200 px-3 py-1 rounded-full">Fácil</span>
+                <span id="game-score">Pontos: 0</span>
+                <span id="game-progress">1/5</span>
+            </div>
+
+            <!-- Temporizador -->
+            <div class="w-full bg-gray-200 rounded-full h-3 mb-6 overflow-hidden">
+                <div id="timer-bar" class="bg-green-500 h-3 rounded-full timer-bar" style="width: 100%"></div>
+            </div>
+
+            <!-- Pergunta -->
+            <h3 id="question-text" class="text-xl sm:text-2xl font-bold text-gray-800 mb-6 text-center leading-tight min-h-[5rem] flex items-center justify-center">
+                Carregando pergunta...
+            </h3>
+
+            <!-- Mensagem de Tempo Esgotado -->
+            <div id="time-out-msg" class="hidden text-center text-red-500 font-extrabold text-xl mb-3 animate-pulse">
+                ⏰ TEMPO ESGOTADO!
+            </div>
+
+            <!-- Opções -->
+            <div id="options-container" class="space-y-3 mt-auto">
+                <!-- Botões gerados via JS -->
+            </div>
+        </div>
+
+        <!-- Tela de Fim de Jogo -->
+        <div id="screen-end" class="hidden text-center space-y-6">
+            <div id="end-icon" class="text-6xl mb-2">🎉</div>
+            <h2 id="end-title" class="text-3xl font-extrabold text-gray-800">Fim de Jogo!</h2>
+            <p id="end-message" class="text-gray-600 font-medium"></p>
+            
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-2xl text-white shadow-lg">
+                <p class="text-lg opacity-90">Sua Pontuação Final</p>
+                <p id="final-score" class="text-5xl font-black mt-1">0</p>
+            </div>
+
+            <div class="space-y-3 text-left">
+                <label class="block text-sm font-bold text-gray-700">Digite seu nome para o Ranking:</label>
+                <input type="text" id="player-name" placeholder="Seu nome ou apelido..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" maxlength="15">
+            </div>
+
+            <button onclick="saveScore()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-green-200">
+                Salvar Pontuação
+            </button>
+            <button onclick="showScreen('screen-home')" class="w-full text-gray-500 hover:text-gray-800 font-bold py-2">
+                Voltar ao Início (Sem salvar)
+            </button>
+        </div>
+
+        <!-- Tela de Ranking -->
+        <div id="screen-ranking" class="hidden flex flex-col h-[400px]">
+            <h2 class="text-2xl font-extrabold text-gray-800 mb-4 text-center">🏆 Top Alunos</h2>
+            
+            <div id="ranking-list" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-2">
+                <!-- Lista gerada via JS -->
+            </div>
+
+            <button onclick="showScreen('screen-home')" class="w-full bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold py-3 rounded-xl transition-colors mt-auto">
+                Voltar ao Menu
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- BANCO DE QUESTÕES (Conteúdo de Geografia do 8º Ano) ---
+        // Perguntas curtas para o formato de 5 a 7 segundos.
+        const questionBank = {
+            facil: [
+                { q: "O espaço físico sobre o qual o Estado exerce poder é o(a):", options: ["Território", "Nação", "Governo", "Cultura"], a: 0 },
+                { q: "Qual país liderou o bloco Capitalista na Guerra Fria?", options: ["Estados Unidos", "União Soviética", "China", "Japão"], a: 0 },
+                { q: "A União Soviética (URSS) representava qual sistema?", options: ["Socialismo", "Capitalismo", "Anarquismo", "Feudalismo"], a: 0 },
+                { q: "Instituição permanente que administra um país:", options: ["Estado", "Governo", "Partido", "Nação"], a: 0 },
+                { q: "Grupo político que exerce o poder TEMPORARIAMENTE:", options: ["Governo", "Estado", "Território", "Nação"], a: 0 },
+                { q: "Limites que separam os territórios dos países:", options: ["Fronteiras", "Nações", "Tratados", "Soberanias"], a: 0 },
+                { q: "Cultura, língua e história comum definem uma:", options: ["Nação", "Fronteira", "Soberania", "Aliança"], a: 0 },
+                { q: "A Nova Ordem Mundial destacou a ascensão de qual país asiático?", options: ["China", "Coreia do Norte", "Vietnã", "Índia"], a: 0 },
+                { q: "Qual era a aliança militar liderada pelos EUA?", options: ["OTAN", "Pacto de Varsóvia", "ONU", "Mercosul"], a: 0 },
+                { q: "A organização responsável por administrar um território e população é:", options: ["O Estado", "A Nação", "O Bairro", "A Fronteira"], a: 0 },
+                { q: "Em que ano a União Soviética foi desintegrada?", options: ["1991", "1945", "2000", "1989"], a: 0 },
+                { q: "A Guerra Fria começou logo após qual evento?", options: ["Segunda Guerra Mundial", "Primeira Guerra Mundial", "Guerra do Vietnã", "Queda do Muro de Berlim"], a: 0 },
+                { q: "Rios e montanhas são exemplos de fronteiras:", options: ["Naturais", "Artificiais", "Ideológicas", "Invisíveis"], a: 0 },
+                { q: "Qual país atual tem forte influência econômica na África e América Latina?", options: ["China", "Japão", "Inglaterra", "França"], a: 0 },
+                { q: "Um Estado sem população e sem território pode existir?", options: ["Não", "Sim", "Apenas na Europa", "Apenas na Ásia"], a: 0 },
+                { q: "A disputa EUA x China hoje é principalmente:", options: ["Comercial e Tecnológica", "Nuclear e Espacial", "Religiosa e Cultural", "Apenas Territorial"], a: 0 }
+            ],
+            media: [
+                { q: "A hegemonia apenas dos EUA nos anos 90 formou uma ordem:", options: ["Unipolar", "Bipolar", "Multipolar", "Socialista"], a: 0 },
+                { q: "Aliança militar liderada pelos EUA na Guerra Fria:", options: ["OTAN", "Pacto de Varsóvia", "ONU", "BRICS"], a: 0 },
+                { q: "Aliança militar liderada pela URSS:", options: ["Pacto de Varsóvia", "OTAN", "União Europeia", "Mercosul"], a: 0 },
+                { q: "Poder supremo e autonomia de um Estado em seu território:", options: ["Soberania", "Globalização", "Multipolaridade", "Governo"], a: 0 },
+                { q: "O fim da Guerra Fria (1991) ocorreu junto com a:", options: ["Fim da URSS", "Queda dos EUA", "Criação da OTAN", "Guerra da Coreia"], a: 0 },
+                { q: "Uma Nação SEM Estado próprio geralmente causa:", options: ["Conflitos territoriais", "Paz mundial", "Fim da globalização", "Aumento de fronteiras naturais"], a: 0 },
+                { q: "O mundo atual, com vários centros de poder (UE, China, EUA), é:", options: ["Multipolar", "Unipolar", "Bipolar", "Apolar"], a: 0 },
+                { q: "Bloco de países emergentes que inclui Brasil e China:", options: ["BRICS", "OTAN", "G7", "NAFTA"], a: 0 },
+                { q: "O governo de um país é permanente ou temporário?", options: ["Temporário", "Permanente", "Eterno", "Vitalício"], a: 0 },
+                { q: "Um exemplo de povo que luta por autodeterminação e território próprio:", options: ["Curdos", "Estadunidenses", "Japoneses", "Brasileiros"], a: 0 },
+                { q: "Além do capitalismo e socialismo, qual disputa marcou a Guerra Fria?", options: ["Corrida armamentista", "Guerra das moedas", "Combate ao terrorismo", "Disputa por água"], a: 0 },
+                { q: "Qual conflito indireto NÃO fez parte da Guerra Fria?", options: ["Guerra do Iraque", "Guerra da Coreia", "Guerra do Vietnã", "Crise dos Mísseis"], a: 0 },
+                { q: "O unilateralismo dos EUA foi criticado no mundo por causa de:", options: ["Guerras custosas (Iraque/Afeganistão)", "Acordos de paz", "Criação da ONU", "Fim do comércio global"], a: 0 },
+                { q: "Espaço aéreo e subsolo fazem parte do:", options: ["Território", "Governo", "Pacto de Varsóvia", "Organismo Internacional"], a: 0 },
+                { q: "O FMI e o Banco Mundial sofreram forte influência indireta de qual país nos anos 90?", options: ["Estados Unidos", "Rússia", "Alemanha", "Japão"], a: 0 },
+                { q: "Com o fim da URSS, qual fenômeno econômico se intensificou no mundo?", options: ["Globalização", "Isolacionismo", "Feudalismo", "Desindustrialização"], a: 0 }
+            ],
+            dificil: [
+                { q: "O que ajudou a desgastar a hegemonia dos EUA nos anos 2000?", options: ["Crise de 2008 e guerras custosas", "Fim da URSS", "Criação da ONU", "Apoio ao bloco socialista"], a: 0 },
+                { q: "A divisão da Europa em Oriental e Ocidental marcou a ordem:", options: ["Bipolar", "Unipolar", "Multipolar", "Globalizada"], a: 0 },
+                { q: "Guerra da Coreia e do Vietnã na Guerra Fria foram exemplos de:", options: ["Conflitos indiretos", "Confronto direto EUA x URSS", "Guerras multipolares", "Tratados de paz"], a: 0 },
+                { q: "Qual NÃO é uma função essencial do Estado?", options: ["Garantir lucros de empresas", "Criar e aplicar leis", "Garantir segurança", "Manter a ordem interna"], a: 0 },
+                { q: "Rivalidade econômica e tecnológica atual que define a Nova Ordem:", options: ["EUA x China", "EUA x Rússia", "URSS x Europa", "Brasil x China"], a: 0 },
+                { q: "Quando a soberania de um país é ameaçada, geralmente ocorrem:", options: ["Intervenções externas", "Acordos comerciais", "Unificações de moedas", "Dissoluções do Estado"], a: 0 },
+                { q: "Rios e montanhas que dividem países são exemplos de fronteiras:", options: ["Naturais", "Artificiais", "Ideológicas", "Culturais"], a: 0 },
+                { q: "Qual foi a principal característica da Guerra Fria?", options: ["Disputa ideológica sem confronto militar direto", "Guerra nuclear", "Fim das fronteiras", "União entre capitalismo e socialismo"], a: 0 },
+                { q: "Para ser considerado Estado, além de população e território, precisa de:", options: ["Governo e Soberania", "Exército e Moeda", "Indústrias e ONU", "Idioma e Religião"], a: 0 },
+                { q: "A ascensão chinesa nos anos 2000 foi impulsionada por:", options: ["Industrialização acelerada e tecnologia", "Fim das exportações", "Adoção total do capitalismo liberal", "Aliança militar com os EUA"], a: 0 },
+                { q: "A reorganização das cadeias produtivas globais hoje reflete as tensões da:", options: ["Nova Ordem Mundial", "Guerra Fria", "Velha Ordem Europeia", "Ordem Bipolar"], a: 0 },
+                { q: "A Europa Ocidental, durante a Guerra Fria, pertencia ao bloco:", options: ["Capitalista", "Socialista", "Não Alinhado", "Soviético"], a: 0 },
+                { q: "O direito de tomar decisões internas sem interferência externa chama-se:", options: ["Independência externa (Soberania)", "Globalização", "Totalitarismo", "Militarização"], a: 0 },
+                { q: "Acordos políticos que dividem países formam fronteiras do tipo:", options: ["Artificiais", "Naturais", "Culturais", "Imaginárias"], a: 0 },
+                { q: "As disputas por territórios internacionais estão mais ligadas à falta de:", options: ["Fronteiras bem definidas e Estados para certas nações", "Armas nucleares", "Tecnologia de ponta", "Acordos econômicos com os EUA"], a: 0 },
+                { q: "O mundo ter vários centros de poder significa que o poder está mais:", options: ["Distribuído e disputado", "Concentrado em um país", "Focado apenas na Europa", "Ignorado pela globalização"], a: 0 }
+            ]
+        };
+
+        // --- VARIÁVEIS DE ESTADO DO JOGO ---
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let currentPhase = 0; // 0: Fácil, 1: Média, 2: Difícil
+        let phaseNames = ["Fácil", "Média", "Difícil"];
+        let phaseCorrectAnswers = 0;
+        const questionsPerPhase = 8;
+        const minCorrectToPass = 4;
+        
+        // Temporizadores por fase (7s, 6s, 5s)
+        const timeLimits = [7000, 6000, 5000]; 
+        let timeRemaining = 0;
+        let timerInterval;
+        let updateInterval;
+        let isAnswering = false;
+
+        // Ranking In-Memory (Zera ao recarregar a página)
+        let ranking = [];
+
+        // --- FUNÇÕES PRINCIPAIS ---
+
+        function showScreen(screenId) {
+            document.querySelectorAll('#app-container > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+            if (screenId === 'screen-ranking') renderRanking();
+        }
+
+        // Embaralha um array
+        function shuffleArray(array) {
+            let shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function startGame() {
+            score = 0;
+            currentPhase = 0;
+            document.getElementById('game-score').innerText = `Pontos: ${score}`;
+            preparePhase();
+        }
+
+        function preparePhase() {
+            // Sorteia perguntas do nível atual
+            let difficulty = currentPhase === 0 ? 'facil' : (currentPhase === 1 ? 'media' : 'dificil');
+            let shuffledBank = shuffleArray(questionBank[difficulty]);
+            currentQuestions = shuffledBank.slice(0, questionsPerPhase); 
+            currentQuestionIndex = 0;
+            phaseCorrectAnswers = 0;
+
+            // Tela de Transição
+            showScreen('screen-phase');
+            document.getElementById('phase-title').innerText = `Fase ${currentPhase + 1}`;
+            document.getElementById('phase-subtitle').innerText = `Nível ${phaseNames[currentPhase]}`;
+
+            setTimeout(() => {
+                showScreen('screen-game');
+                document.getElementById('game-phase-indicator').innerText = phaseNames[currentPhase];
+                loadQuestion();
+            }, 2500); // 2.5s de suspense
+        }
+
+        function loadQuestion() {
+            isAnswering = false;
+            let qData = currentQuestions[currentQuestionIndex];
+            
+            document.getElementById('time-out-msg').classList.add('hidden');
+            
+            document.getElementById('game-progress').innerText = `${currentQuestionIndex + 1}/${questionsPerPhase}`;
+            document.getElementById('question-text').innerText = qData.q;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            // Embaralha as opções, guardando qual era a correta
+            let optionsWithIndex = qData.options.map((opt, idx) => ({ text: opt, isCorrect: idx === qData.a }));
+            let shuffledOptions = shuffleArray(optionsWithIndex);
+
+            shuffledOptions.forEach((opt, idx) => {
+                let btn = document.createElement('button');
+                btn.className = "w-full bg-white border-2 border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl text-left option-btn";
+                btn.innerText = opt.text;
+                btn.onclick = () => handleAnswer(opt.isCorrect, btn, shuffledOptions);
+                optionsContainer.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            let currentTimeLimit = timeLimits[currentPhase];
+            timeRemaining = currentTimeLimit;
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.width = '100%';
+            timerBar.className = "bg-green-500 h-3 rounded-full timer-bar"; // Reseta cor
+
+            clearInterval(updateInterval);
+            clearInterval(timerInterval);
+
+            // Atualiza visual a cada 50ms para suavidade
+            updateInterval = setInterval(() => {
+                timeRemaining -= 50;
+                let percentage = (timeRemaining / currentTimeLimit) * 100;
+                timerBar.style.width = `${Math.max(0, percentage)}%`;
+
+                // Muda cor baseado no tempo
+                if(percentage < 30) timerBar.className = "bg-red-500 h-3 rounded-full timer-bar";
+                else if(percentage < 60) timerBar.className = "bg-yellow-400 h-3 rounded-full timer-bar";
+
+                if (timeRemaining <= 0) {
+                    clearInterval(updateInterval);
+                    handleTimeOut();
+                }
+            }, 50);
+        }
+
+        function handleAnswer(isCorrect, selectedBtn, optionsData) {
+            if (isAnswering) return;
+            isAnswering = true;
+            clearInterval(updateInterval);
+
+            const buttons = document.getElementById('options-container').children;
+            
+            // Desabilita botões e mostra feedback
+            for(let i=0; i<buttons.length; i++) {
+                buttons[i].disabled = true;
+                if(optionsData[i].isCorrect) {
+                    buttons[i].classList.add('correct-answer');
+                } else if(buttons[i] === selectedBtn && !isCorrect) {
+                    buttons[i].classList.add('wrong-answer');
+                }
+            }
+
+            if (isCorrect) {
+                phaseCorrectAnswers++;
+                let currentTimeLimit = timeLimits[currentPhase];
+                // Pontuação: Base (50) + Bônus de tempo (até 50) * Multiplicador de Fase
+                let timeBonus = Math.floor((timeRemaining / currentTimeLimit) * 50);
+                let phaseMultiplier = currentPhase + 1; // 1, 2 ou 3
+                let pointsEarned = (50 + timeBonus) * phaseMultiplier;
+                score += pointsEarned;
+                document.getElementById('game-score').innerText = `Pontos: ${score}`;
+            }
+
+            setTimeout(nextStep, 1500); // Mostra o resultado por 1.5s
+        }
+
+        function handleTimeOut() {
+            if (isAnswering) return;
+            isAnswering = true;
+
+            document.getElementById('time-out-msg').classList.remove('hidden');
+
+            const buttons = document.getElementById('options-container').children;
+            // Apenas mostra qual era a correta
+            // Recupera a lógica das opções para achar a correta
+            let qData = currentQuestions[currentQuestionIndex];
+            
+            for(let i=0; i<buttons.length; i++) {
+                buttons[i].disabled = true;
+                if(buttons[i].innerText === qData.options[qData.a]) {
+                    buttons[i].classList.add('correct-answer');
+                }
+            }
+
+            setTimeout(nextStep, 2000); // Aumentado levemente para o aluno conseguir ler a mensagem
+        }
+
+        function nextStep() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questionsPerPhase) {
+                loadQuestion();
+            } else {
+                // Fim da fase - Verifica acertos
+                if (phaseCorrectAnswers >= minCorrectToPass) {
+                    currentPhase++;
+                    if (currentPhase < 3) {
+                        preparePhase();
+                    } else {
+                        endGame(true); // Venceu o jogo inteiro
+                    }
+                } else {
+                    endGame(false); // Game Over por não atingir a meta
+                }
+            }
+        }
+
+        function endGame(victory = true) {
+            showScreen('screen-end');
+            
+            const titleEl = document.getElementById('end-title');
+            const iconEl = document.getElementById('end-icon');
+            const msgEl = document.getElementById('end-message');
+            
+            if (victory) {
+                iconEl.innerText = '🎉';
+                titleEl.innerText = 'Fim de Jogo!';
+                msgEl.innerText = 'Parabéns por concluir todas as fases!';
+            } else {
+                iconEl.innerText = '❌';
+                titleEl.innerText = 'Game Over!';
+                msgEl.innerText = `Você acertou apenas ${phaseCorrectAnswers} de ${questionsPerPhase} na fase ${phaseNames[currentPhase]}. Tente novamente!`;
+            }
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('player-name').value = '';
+        }
+
+        function saveScore() {
+            let name = document.getElementById('player-name').value.trim();
+            if (!name) name = "Aluno Anônimo";
+
+            ranking.push({ name: name, score: score });
+            
+            // Ordena o ranking (maior para menor)
+            ranking.sort((a, b) => b.score - a.score);
+            
+            showScreen('screen-ranking');
+        }
+
+        function renderRanking() {
+            const list = document.getElementById('ranking-list');
+            list.innerHTML = '';
+
+            if (ranking.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-500 mt-10">Nenhuma pontuação registrada ainda. Seja o primeiro!</p>';
+                return;
+            }
+
+            ranking.forEach((entry, index) => {
+                let badge = '';
+                if(index === 0) badge = '🥇';
+                else if(index === 1) badge = '🥈';
+                else if(index === 2) badge = '🥉';
+                else badge = `<span class="text-gray-400 font-bold ml-1">${index + 1}º</span>`;
+
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl w-8 text-center">${badge}</span>
+                            <span class="font-bold text-gray-700">${entry.name}</span>
+                        </div>
+                        <span class="font-black text-blue-600">${entry.score} pts</span>
+                    </div>
+                `;
+            });
+        }
+
+        // Inicializa mostrando a Home
+        showScreen('screen-home');
+    </script>
+</body>
+</html>
