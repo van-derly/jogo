@@ -63,8 +63,8 @@
                 <ul class="list-disc pl-5 space-y-1">
                     <li>Sua missão tem 3 Níveis de Segurança (8 documentos cada).</li>
                     <li>Descriptografe no mínimo <strong>4 arquivos</strong> para não ser descoberto.</li>
-                    <li><span class="text-red-400">Risco Crítico:</span> Os dados se autodestroem entre <strong>5 a 7 SEGUNDOS!</strong></li>
-                    <li>Velocidade e precisão garantem maior nível de autorização (pontos).</li>
+                    <li><span class="text-red-400">Risco Crítico:</span> Os dados se autodestroem entre <strong>8 a 12 SEGUNDOS!</strong></li>
+                    <li>Erros ou tempo esgotado penalizam em <strong class="text-red-400">-50 pontos</strong>.</li>
                 </ul>
             </div>
 
@@ -105,7 +105,7 @@
 
             <!-- Mensagem de Tempo Esgotado -->
             <div id="time-out-msg" class="hidden text-center text-red-500 font-extrabold text-xl mb-3 animate-pulse">
-                ⏰ TEMPO ESGOTADO!
+                ⏰ TEMPO ESGOTADO! (-50 pts)
             </div>
 
             <!-- Opções -->
@@ -155,7 +155,6 @@
 
     <script>
         // --- BANCO DE QUESTÕES (Conteúdo de Geografia do 8º Ano) ---
-        // Perguntas curtas para o formato de 5 a 7 segundos.
         const questionBank = {
             facil: [
                 { q: "O espaço físico sobre o qual o Estado exerce poder é o(a):", options: ["Território", "Nação", "Governo", "Cultura"], a: 0 },
@@ -223,8 +222,8 @@
         const questionsPerPhase = 8;
         const minCorrectToPass = 4;
         
-        // Temporizadores por fase (7s, 6s, 5s)
-        const timeLimits = [7000, 6000, 5000]; 
+        // Temporizadores por fase (12s, 10s, 8s)
+        const timeLimits = [12000, 10000, 8000]; 
         let timeRemaining = 0;
         let timerInterval;
         let updateInterval;
@@ -357,8 +356,13 @@
                 let phaseMultiplier = currentPhase + 1; // 1, 2 ou 3
                 let pointsEarned = (50 + timeBonus) * phaseMultiplier;
                 score += pointsEarned;
-                document.getElementById('game-score').innerText = `Pontos: ${score}`;
+            } else {
+                // Penalidade por erro
+                score = Math.max(0, score - 50);
             }
+            
+            // Atualiza pontuação na tela
+            document.getElementById('game-score').innerText = `Pontos: ${score}`;
 
             setTimeout(nextStep, 1500); // Mostra o resultado por 1.5s
         }
@@ -368,6 +372,10 @@
             isAnswering = true;
 
             document.getElementById('time-out-msg').classList.remove('hidden');
+
+            // Penalidade por tempo esgotado
+            score = Math.max(0, score - 50);
+            document.getElementById('game-score').innerText = `Pontos: ${score}`;
 
             const buttons = document.getElementById('options-container').children;
             // Apenas mostra qual era a correta
